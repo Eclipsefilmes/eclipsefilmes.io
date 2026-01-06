@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FERMOVIE</title>
+
+<style>
+body {
+  margin: 0;
+  background: #000;
+  color: #fff;
+  font-family: Arial, sans-serif;
+}
+
+/* ===== BANNER ===== */
+.banner {
+  position: relative;
+  width: 100%;
+  height: min(60vh, 420px);
+  overflow: hidden;
+}
+
+.banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    #000 20%,
+    rgba(0,0,0,.6) 45%,
+    transparent 80%
+  );
+}
+
+.banner h1 {
+  position: absolute;
+  bottom: 24px;
+  left: 16px;
+  font-size: clamp(20px, 5vw, 26px);
+  font-weight: bold;
+  z-index: 2;
+}
+
+/* ===== SEÇÕES ===== */
+.section {
+  padding: 14px;
+}
+
+.section h2 {
+  font-size: 16px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/* ===== LISTA ===== */
+.list {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.card {
+  width: 110px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.card img {
+  width: 100%;
+  height: 165px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+/* ===== DETALHES ===== */
+.details {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 50;
+  display: none;
+  overflow-y: auto;
+}
+
+.details.show {
+  display: block;
+}
+
+.details-backdrop {
+  width: 100%;
+  height: min(55vh, 400px);
+  object-fit: contain;
+  background: #000;
+}
+
+.details-content {
+  padding: 16px;
+}
+
+.details h3 {
+  margin: 10px 0;
+  font-size: 20px;
+}
+
+.details p {
+  color: #bbb;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ===== BOTÃO ===== */
+.btn {
+  margin-top: 14px;
+  width: 100%;
+  padding: 14px;
+  background: #9c27b0;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* ===== PLAYER ===== */
+video {
+  width: 100%;
+  margin-top: 14px;
+  border-radius: 10px;
+  background: #000;
+}
+
+/* ===== FOOTER ===== */
+footer {
+  padding: 20px 14px 30px;
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+}
+
+.aviso {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #9c27b0;
+  border-radius: 10px;
+  color: #ddd;
+  font-size: 13px;
+}
+
+.instagram {
+  margin-top: 10px;
+}
+
+.instagram a {
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.instagram img {
+  width: 26px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="banner"></div>
+
+<div class="section">
+  <h2>Populares</h2>
+  <div class="list" id="populares"></div>
+</div>
+
+<div class="section">
+  <h2>Dublados</h2>
+  <div class="list" id="dublados"></div>
+</div>
+
+<!-- DETALHES -->
+<div class="details" id="details">
+  <img id="detailsBackdrop" class="details-backdrop">
+  <div class="details-content">
+    <h3 id="detailsTitle"></h3>
+    <p id="detailsDesc"></p>
+
+    <button class="btn" onclick="playMovie()">▶ Assistir</button>
+
+    <video id="player" controls playsinline></video>
+  </div>
+</div>
+
+<footer>
+  <div>© Copyright - Felipe Ccy 2026</div>
+
+  <div class="aviso">
+    ⚠️ AVISO: Esse foi criado por Felipe Warlei vulgo Chapinha.<br>
+    O site fornece filmes totalmente de graça e sem anúncios.<br>
+    Aproveite como quiser!
+  </div>
+
+  <div class="instagram">
+    <a href="https://www.instagram.com/vlg.chapinha?igsh=MjY1M3l4enJvOXl4" target="_blank">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Instagram_icon.png">
+      @vlg.chapinha
+    </a>
+  </div>
+</footer>
+
+<script>
+const SHEET_API = "https://sheetdb.io/api/v1/fj8limxarcrek";
+const TMDB_KEY  = "e849045922172492b3e79f58d1ec3efd";
+
+let currentLink = "";
+
+/* ===== TMDB ===== */
+async function getTMDB(nome) {
+  const r = await fetch(
+    `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_KEY}&language=pt-BR&query=${encodeURIComponent(nome)}`
+  );
+  const j = await r.json();
+  return j.results[0];
+}
+
+/* ===== LOAD ===== */
+async function loadMovies() {
+  const res = await fetch(SHEET_API);
+  const movies = await res.json();
+
+  for (const m of movies) {
+    const info = await getTMDB(m.nome);
+    if (!info) continue;
+
+    if (m.banner === "sim") {
+      document.getElementById("banner").innerHTML = `
+        <div class="banner">
+          <img src="https://image.tmdb.org/t/p/original${info.backdrop_path}">
+          <h1>${m.nome}</h1>
+        </div>
+      `;
+    }
+
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `<img src="https://image.tmdb.org/t/p/w500${info.poster_path}">`;
+    card.onclick = () => openDetails(m, info);
+
+    if (m.categorias.includes("populares")) {
+      document.getElementById("populares").appendChild(card.cloneNode(true));
+      document.getElementById("populares").lastChild.onclick = () => openDetails(m, info);
+    }
+
+    if (m.categorias.includes("dublados")) {
+      document.getElementById("dublados").appendChild(card);
+    }
+  }
+}
+
+/* ===== DETALHES ===== */
+function openDetails(movie, info) {
+  currentLink = movie.link;
+  document.getElementById("detailsTitle").innerText = movie.nome;
+  document.getElementById("detailsDesc").innerText = info.overview || "Sem descrição.";
+  document.getElementById("detailsBackdrop").src =
+    `https://image.tmdb.org/t/p/original${info.backdrop_path}`;
+
+  document.getElementById("details").classList.add("show");
+  history.pushState({ page: "details" }, "");
+}
+
+function closeDetails() {
+  document.getElementById("details").classList.remove("show");
+  const player = document.getElementById("player");
+  player.pause();
+  player.src = "";
+}
+
+/* ===== PLAYER ===== */
+function playMovie() {
+  const player = document.getElementById("player");
+  player.src = currentLink;
+  player.load();
+  player.requestFullscreen?.();
+}
+
+/* ===== VOLTAR DO CELULAR ===== */
+window.addEventListener("popstate", () => {
+  closeDetails();
+});
+
+/* ===== CLICK FORA ===== */
+document.getElementById("details").onclick = e => {
+  if (e.target.id === "details") {
+    history.back();
+  }
+};
+
+loadMovies();
+</script>
+
+</body>
+</html>
